@@ -1233,6 +1233,7 @@ local default_file_tree = {
 
 function get_api_json(url)
 	local gh_proxy = uci_get_c("@global_app[0]", "gh_proxy_url") or ""
+	local curl_args = {"-s"}
 	local return_code, content
 	if gh_proxy ~= "" then
 		url = gh_proxy .. url
@@ -1641,13 +1642,13 @@ function to_check_self()
 	end
 	local selected = {}
 	for _, code in ipairs(languages) do
-		if not found[code] then return {code = 1, error = i18n.translate("Get remote version info failed.")} end
-		selected[#selected + 1] = found[code]
+		if found[code] then selected[#selected + 1] = found[code] end
 	end
-	if not main then return {code = 1, error = i18n.translate("Get remote version info failed.")} end
-	local assets = {main}
-	for _, asset in ipairs(selected) do assets[#assets + 1] = asset end
-	cache_update_digests(appname, assets)
+	if main then
+		local assets = {main}
+		for _, asset in ipairs(selected) do assets[#assets + 1] = asset end
+		cache_update_digests(appname, assets)
+	end
 	return {
 		code = 0, has_update = compare_versions(local_version, "<", remote_version),
 		local_version = local_version, remote_version = remote_version, html_url = release.html_url,
