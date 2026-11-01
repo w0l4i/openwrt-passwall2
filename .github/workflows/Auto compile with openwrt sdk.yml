@@ -11,6 +11,14 @@ on:
         description: 'SSH connection to Actions'
         required: false
         default: 'false'
+      force_build:
+        description: 'Force build and package release assets'
+        required: false
+        default: 'true'
+      build_all_targets:
+        description: 'Build binary packages across all 13 architecture targets'
+        required: false
+        default: 'false'
 env:
   TZ: Asia/Shanghai
   passwall2: ${{ github.repository }}
@@ -58,10 +66,10 @@ jobs:
           fi
           echo "Remote latest: $remote_latest_version"
 
-          if [ "$latest_version" = "$remote_latest_version" ]; then
-            echo "has_update=false" >> $GITHUB_OUTPUT
-          else
+          if [ "${{ github.event.inputs.force_build }}" = "true" ] || [ "$latest_version" != "$remote_latest_version" ]; then
             echo "has_update=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_update=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Prepare release
@@ -237,6 +245,7 @@ jobs:
     name: Trigger packages cache workflow
     needs: job_build_passwall2
     if: ${{ needs.job_build_passwall2.result == 'success' }}
+    continue-on-error: true
     runs-on: ubuntu-26.04
     steps:
       - name: Dispatch Auto Cache Software Release JSONs
@@ -245,11 +254,11 @@ jobs:
         run: |
           gh workflow run "Auto cache software release jsons.yml" \
             --repo "${{ env.packages }}" \
-            --ref main
+            --ref main || true
 
 
   job_auto_compile:
-    if: ${{ needs.job_check.outputs.has_update == 'true' && needs.job_check.outputs.prerelease == 'false' }}
+    if: ${{ needs.job_check.outputs.has_update == 'true' && needs.job_check.outputs.prerelease == 'false' && github.event.inputs.build_all_targets == 'true' }}
     needs: job_check
     runs-on: ubuntu-26.04
     name: build (${{ matrix.platform }})

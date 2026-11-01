@@ -196,6 +196,16 @@ local com = self.com
 			}, 300);
 		}
 
+		if (downloadList.length === 0) {
+			removePageNotice(app);
+			setButtonDisabled(btn, false);
+			if (appInfo && appInfo.html_url) {
+				window.open(appInfo.html_url, '_blank');
+			}
+			onRequestError(btn, '<%:No standalone package attached; opening release page...%>');
+			return;
+		}
+
 		if (totalSize > 0) {
 			updateDownloadProgress();
 			progressTimer = setInterval(updateDownloadProgress, 1000);
@@ -203,6 +213,12 @@ local com = self.com
 
 		function download(part) {
 			var asset = downloadList[part - 1];
+			if (!asset || !asset.browser_download_url) {
+				stopDownloadProgress();
+				removePageNotice(app);
+				onRequestError(btn, updateFailedText);
+				return;
+			}
 			XHR.get(appUpdateUrl, {
 				token: tokenStr, url: asset.browser_download_url,
 				size: (app === appname && part === 1 ? totalSize : asset.size) / 1024,
